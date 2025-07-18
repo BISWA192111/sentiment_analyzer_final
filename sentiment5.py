@@ -1,4 +1,4 @@
-# app.py
+#loading all the required libraries, arranged at the top after completing the entire code 
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
@@ -32,9 +32,9 @@ import json
 from sklearn.exceptions import NotFittedError
 
 app = Flask(__name__, template_folder='templates')
-app.secret_key = 'your-secret-key-here-123'  # Change this for production
+app.secret_key = 'your-secret-key-here-123'  # can be changed according to the need, cool isn't it :)
 
-# Initialize NLP tools
+# Initializing NLP tools required for natural language procssing
 nltk.download('punkt', quiet=True)
 nltk.download('wordnet', quiet=True)
 nltk.download('stopwords', quiet=True)
@@ -42,11 +42,11 @@ nltk.download('vader_lexicon', quiet=True)
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
-# File paths
+# uloading the csv file for training, testing and validation
 DB_FILE = "user_responses.csv"
-TRAINING_DATA_FILE = "C:\\Users\\USER\\Downloads\\sentiment-analysis-app-1\\output_cleaned.csv"  # Your CSV file with statement/status
+TRAINING_DATA_FILE = "C:\\Users\\USER\\Downloads\\sentiment-analysis-app-1\\output_cleaned.csv"  
 os.makedirs('models', exist_ok=True)
-# os.makedirs('templates', exist_ok=True) # This line is removed as per the edit hint
+
 
 import os
 os.environ["HF_HOME"] = os.path.join(os.path.dirname(__file__), "hf_home")
@@ -55,7 +55,7 @@ from transformers.pipelines import pipeline
 from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 
-# Set model_dir globally so it is always defined and available for BERT model loading
+# Setting model_dir globally so it is always defined and available for BERT model loading
 model_dir = os.path.join(os.path.dirname(__file__), "local-bert-model")
 
 class SentimentAnalyzer:
@@ -68,17 +68,17 @@ class SentimentAnalyzer:
         }
         self.model_accuracy = {}
         self.vader = SentimentIntensityAnalyzer()
-        # Force use of fine-tuned DistilBERT model only
+        # Force use of fine-tuned DistilBERT model only since its accuracy is more than other models used and implied after testing
         distilbert_model_dir = './distilbert-finetuned-patient'
         if not os.path.exists(distilbert_model_dir):
             raise FileNotFoundError(f"Fine-tuned DistilBERT model not found at {distilbert_model_dir}. Please train the model first.")
-        # Try both 'text-classification' and 'sentiment-analysis' for compatibility
+        # Trying both 'text-classification' and 'sentiment-analysis' for compatibility
         try:
             self.distilbert_sentiment = pipeline("text-classification", model=distilbert_model_dir)
         except Exception:
             self.distilbert_sentiment = pipeline("sentiment-analysis", model=distilbert_model_dir)
         print(f"[INFO] DistilBERT sentiment model loaded from: {distilbert_model_dir}")
-        # Always load BERT sentiment model from local directory only
+        # loading BERT sentiment model from local directory only to avoid any error
         try:
             self.bert_sentiment_tokenizer = BertTokenizer.from_pretrained(model_dir)
             self.bert_sentiment_model = BertForSequenceClassification.from_pretrained(model_dir)
@@ -94,10 +94,10 @@ class SentimentAnalyzer:
         self.initialize_models()
         self.cached_metrics = None
         self.last_metrics_data_hash = None
-        # Set metrics cache file as instance variable
+        # Setting metrics cache file as instance variable and loading the csv file for phase checking
         self.metrics_cache_file = os.path.join('models', 'metrics_cache.json')
         self.before_kw, self.during_kw, self.after_kw = self.load_time_keywords_from_csv('C:\\Users\\USER\\Downloads\\sentiment-analysis-app-1\\sentiment_phases_1000.csv')
-        # Load phase classifier and vectorizer
+        # Loading phase classifier and vectorizer from the ther model training, present in the directory uploaded
         import joblib
         self.phase_clf = joblib.load('phase_classifier.pkl')
         self.phase_vectorizer = joblib.load('phase_vectorizer.pkl')
@@ -129,7 +129,7 @@ class SentimentAnalyzer:
         """Map string labels to numeric and drop invalid/missing labels."""
         label_map = {'Negative': -1, 'Neutral': 0, 'Positive': 1, -1: -1, 0: 0, 1: 1}
         mapped = series.map(label_map)
-        # Drop NaNs (invalid labels)
+        # Dropping NaNs (invalid labels)
         return mapped.dropna().astype(int)
     
     def load_training_data(self):
@@ -146,7 +146,7 @@ class SentimentAnalyzer:
                 raise SystemExit(1)
             df = df.dropna(subset=['statement', 'label'])
             df = df[df['statement'].apply(lambda x: isinstance(x, str))]
-            # Clean labels
+            # Cleaning labels
             df['label'] = self.clean_labels(df['label'])
             if not isinstance(df, pd.DataFrame):
                 df = pd.DataFrame(df)
@@ -163,7 +163,7 @@ class SentimentAnalyzer:
         X_temp, X_test, y_temp, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state, stratify=y
         )
-        # Now split the remaining data into train and validation
+        # Now spliting the remaining data into train and validation
         val_ratio = val_size / (train_size + val_size)
         X_train, X_val, y_train, y_val = train_test_split(
             X_temp, y_temp, test_size=val_ratio, random_state=random_state, stratify=y_temp
@@ -180,7 +180,7 @@ class SentimentAnalyzer:
         df = df[df['cleaned_text'].str.len() > 2]
         if not isinstance(df, pd.DataFrame):
             df = pd.DataFrame(df)
-        # Print class distribution
+        # Printing class distribution
         class_counts = df['label'].value_counts().sort_index()
         print("Class distribution:")
         for k in [-1, 0, 1]:
@@ -194,7 +194,7 @@ class SentimentAnalyzer:
         # Improved vectorizer: bigrams, stopwords, sublinear_tf, more features
         self.vectorizer = TfidfVectorizer(max_features=10000, ngram_range=(1,2), stop_words='english', sublinear_tf=True)
         X_vec = self.vectorizer.fit_transform(X)
-        # Split into train, val, test
+        # Splitting into train, val, test
         X_train, X_val, X_test, y_train, y_val, y_test = self.split_train_val_test(X_vec, y)
         print(f"Train size: {len(X_train)}, Validation size: {len(X_val)}, Test size: {len(X_test)}")
         self.models = {}
@@ -235,7 +235,7 @@ class SentimentAnalyzer:
         try:
             blob = TextBlob(text)
             sentences_attr = getattr(blob, 'sentences', None)
-            # Check if sentences_attr is iterable
+            # Checking if sentences_attr is iterable
             if sentences_attr is not None and hasattr(sentences_attr, '__iter__'):
                 sentences = list(sentences_attr)
                 if not sentences:
@@ -248,7 +248,7 @@ class SentimentAnalyzer:
             return [text]
 
     def classify_time_period(self, sentence, current_phase=None, debug=False):
-        # Use ML classifier for phase detection
+        # Use ML classifier for phase detection ( :( took a lot of time still not that accurate due to improper data)
         vec = self.phase_vectorizer.transform([sentence])
         phase = self.phase_clf.predict(vec)[0]
         if debug:
@@ -265,18 +265,11 @@ class SentimentAnalyzer:
         with torch.no_grad():
             outputs = self.bert_sentiment_model(**inputs)
             probs = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
-            pred = int(torch.argmax(probs).item())  # Ensure pred is int
-            # For 'textattack/bert-base-uncased-imdb', 1=POSITIVE, 0=NEGATIVE
+            pred = int(torch.argmax(probs).item()) 
             label = "POSITIVE" if pred == 1 else "NEGATIVE"
-            score = float(probs[int(pred)])  # Ensure index is int
+            score = float(probs[int(pred)]) 
             return label, score
 
-    # --- Healthcare Bot Context ---
-    # This app is adapted for a healthcare bot that analyzes patient reviews before, during, and after treatment.
-    # It compares sentiment over time and shows results for patient feedback analysis.
-    # Metrics calculation is commented out for performance; re-enable if needed for model evaluation.
-
-    # Comment out metrics calculation and related code
     # def get_metrics(self):
     #     """
     #     Calculate and cache only the accuracy for each model on the training set.
@@ -388,7 +381,7 @@ class SentimentAnalyzer:
         """Analyze text for healthcare bot: show sentence-level sentiment only (no before/during/after comparison)."""
         try:
             patient_id = str(uuid.uuid4())
-            # Compute BERT sentiment for the entire paragraph only once
+            # Computing BERT sentiment for the entire paragraph only once
             try:
                 bert_sentiment, bert_score = self.predict_bert_sentiment(text)
             except Exception as bert_err:
@@ -397,7 +390,7 @@ class SentimentAnalyzer:
                 bert_score = 0.0
             statements = self.split_statements(text)
             all_results = []
-            # Add a single BERT sentiment result for the whole paragraph
+            # Addding a single BERT sentiment result for the whole paragraph
             all_results.append({
                 "patient_id": patient_id,
                 "text": text,
@@ -411,7 +404,7 @@ class SentimentAnalyzer:
                 statement = str(statement)
                 cleaned_text = self.preprocess_text(statement)
                 features = self.vectorizer.transform([cleaned_text])
-                # Temporal classification (extensive CSV matching)
+                # Temporal classification (extensively for CSV matching :))
                 time_period, current_phase = self.classify_time_period(statement, current_phase, debug=True)
                 if time_period is None:
                     if idx == 0:
@@ -448,7 +441,7 @@ class SentimentAnalyzer:
                     subjectivity = 0.0
                     tb_sentiment = "Unknown"
                     tb_confidence = 0.0
-                # VADER sentiment (always included)
+                # VADER sentiment 
                 try:
                     vader_scores = self.vader.polarity_scores(statement)
                     compound = vader_scores['compound']
@@ -468,7 +461,7 @@ class SentimentAnalyzer:
                     "cleaned_text": cleaned_text,
                     "timestamp": datetime.now().isoformat(),
                     "time_period": time_period,
-                    "phase": time_period,  # Add this line for explicit phase
+                    "phase": time_period, 
                     # No BERT sentiment here
                     "sentiment_textblob": tb_sentiment,
                     "confidence_textblob": tb_confidence,
@@ -507,15 +500,15 @@ class SentimentAnalyzer:
                     results["confidence_svm"] = 0.0
                 self.save_to_db(results)
                 all_results.append(results)
-            # Fallback: assign first to 'before', last to 'after', others to 'during' if no keyword matched and at least 3 sentences
+            # Fallback: assign first to 'before', last to 'after', others to 'during' if no keyword matched and at least 3 sentences(lateron removed this)
             n = len(statements)
             for idx, r in enumerate(all_results[1:]):
-                if r.get('phase') == 'during':  # Only if not matched to before/after
+                if r.get('phase') == 'during': 
                     if idx == 0:
                         r['phase'] = 'before'
                     elif idx == n - 2:
                         r['phase'] = 'after'
-            # --- Phase sentiment aggregation (DistilBERT label counts) ---
+            # Phase sentiment aggregation
             from collections import defaultdict, Counter
             phase_sentiments = defaultdict(list)
             # Accept both string and numeric label outputs
@@ -527,7 +520,7 @@ class SentimentAnalyzer:
                 -1: 'Negative', 0: 'Neutral', 1: 'Positive'
             }
             statement_results = []
-            for r in all_results[1:]:  # skip the first, which is the whole paragraph
+            for r in all_results[1:]:  
                 phase = r.get('phase')
                 label = r.get('sentiment_distilbert', '')
                 label_upper = str(label).upper()
@@ -541,7 +534,7 @@ class SentimentAnalyzer:
                     'sentiment': human_sentiment,
                     'score': f"{score:.3f}" if isinstance(score, float) else score
                 })
-            # Only return the per-statement results
+            # Only returns the per-statement results
             return {
                 "statements": statement_results
             }
@@ -565,7 +558,7 @@ class SentimentAnalyzer:
             print(f"Error saving to database: {e}")
     
     def label_to_string(self, label):
-        # Map numeric label to string for display
+        # Maps numeric label to string for display
         if label == 1 or label == '1':
             return 'Positive'
         elif label == 0 or label == '0':
